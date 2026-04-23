@@ -1,0 +1,8 @@
+/vendor/
+/node_modules/
+/.phpunit.result.cache
+/.env
+.env.local
+.env.*.local
+.phpactor.json
+.php-cs-fixer.php

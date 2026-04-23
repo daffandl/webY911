@@ -1,26 +1,329 @@
 @import "tailwindcss";
 
+/* Tailwind v4: use class-based dark mode */
+@variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Light Theme — green-tinted bg, black text */
+  --background: #dcfce7;
+  --foreground: #111111;
+  --primary: #166534;           /* dark green */
+  --primary-hover: #15803d;
+  --secondary: #166534;
+  --secondary-hover: #15803d;
+  --card-bg: #f9fafb;
+  --card-border: #e5e7eb;
+  --section-bg: #f9fafb;
+  --nav-bg: rgba(255, 255, 255, 0.97);
+  --nav-border: #e5e7eb;
+  --text-muted: #6b7280;
+  --text-body: #111111;
+}
+
+[data-theme="dark"] {
+  --background: #0a0f0a;
+  --foreground: #f5f5f5;
+  --primary: #166534;
+  --primary-hover: #15803d;
+  --secondary: #166534;
+  --secondary-hover: #15803d;
+  --card-bg: #0f1a0f;
+  --card-border: #1a2e1a;
+  --section-bg: #0a0f0a;
+  --nav-bg: rgba(10, 15, 10, 0.98);
+  --nav-border: #1a2e1a;
+  --text-muted: #9ca3af;
+  --text-body: #f5f5f5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --font-sans: var(--font-outfit);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Hide scrollbar — all browsers ────────────────────── */
+html, body, * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
+}
+
+/* ─── Light mode — unified green background ────────────── */
+html.light body,
+html:not(.dark) body {
+  background-color: #dcfce7;
+  color: #111111;
+}
+
+/* ─── Scrollbar hide utility ──────────────────────────── */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BUTTON STYLES — clip-path polygon (cut corners)
+═══════════════════════════════════════════════════════ */
+
+/* ── Shared clip shape ── */
+.btn-glow,
+.btn-green,
+.btn-primary,
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Corner accent — top-right */
+.btn-glow::before,
+.btn-green::before,
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 12px; height: 1px;
+  z-index: 1;
+}
+/* Corner accent — right-top */
+.btn-glow::after,
+.btn-green::after,
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 1px; height: 12px;
+  z-index: 1;
+}
+
+/* ── btn-glow: orange — primary action ── */
+.btn-glow {
+  padding: 0.375rem 0.375rem 0.375rem 1.375rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
+  border: 1px solid rgba(251,146,60,0.40);
+}
+.btn-glow::before { background: rgba(251,146,60,0.70); }
+.btn-glow::after  { background: rgba(251,146,60,0.70); }
+.btn-glow:hover {
+  background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(194,65,12,0.35);
+}
+
+/* ── btn-green: green — secondary action ── */
+.btn-green {
+  padding: 0.375rem 0.375rem 0.375rem 1.375rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #166534 0%, #14532d 100%);
+  border: 1px solid rgba(74,222,128,0.35);
+}
+.btn-green::before { background: rgba(74,222,128,0.60); }
+.btn-green::after  { background: rgba(74,222,128,0.60); }
+.btn-green:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(22,101,52,0.40);
+}
+
+/* ── btn-primary: alias of btn-green ── */
+.btn-primary {
+  padding: 0.375rem 0.375rem 0.375rem 1.375rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #166534 0%, #14532d 100%);
+  border: 1px solid rgba(74,222,128,0.35);
+}
+.btn-primary::before { background: rgba(74,222,128,0.60); }
+.btn-primary::after  { background: rgba(74,222,128,0.60); }
+.btn-primary:hover {
+  background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(22,101,52,0.40);
+}
+
+/* ── btn-outline: transparent ── */
+.btn-outline {
+  padding: 0.75rem 1rem 0.75rem 1.375rem;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+.btn-outline:hover {
+  transform: translateY(-1px);
+}
+
+/* ── Icon circle — clipped ── */
+.btn-icon-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+.btn-icon-circle--green {
+  background: rgba(255, 255, 255, 0.18);
+}
+.btn-glow .btn-icon-circle {
+  background: rgba(255, 255, 255, 0.22);
+}
+.btn-green .btn-icon-circle,
+.btn-primary .btn-icon-circle {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ═══════════════════════════════════════════════════════
+   CARD STYLES — clip-path polygon, light & dark
+═══════════════════════════════════════════════════════ */
+
+.card-clip {
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+.card-clip:hover {
+  transform: translateY(-4px);
+}
+
+/* Corner accent lines */
+.card-clip::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 16px; height: 1px;
+  background: rgba(74,222,128,0.50);
+  z-index: 1;
+  pointer-events: none;
+}
+.card-clip::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 1px; height: 16px;
+  background: rgba(74,222,128,0.50);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* card-clip-faq: same as light but NO hover bg/transform change (accordion use) */
+.card-clip-faq {
+  background: #bbf7d0;
+  border: 1px solid #86efac;
+}
+.card-clip-faq:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+:where(.dark, .dark *) .card-clip-faq {
+  background: #0f1a0f;
+  border-color: #1a2e1a;
+}
+
+/* Light mode card */
+.card-clip-light {
+  background: #bbf7d0;
+  border: 1px solid #86efac;
+}
+.card-clip-light:hover {
+  background: #166534;
+  box-shadow: 0 12px 32px rgba(22,101,52,0.25);
+}
+/* Flip text to white when card goes dark on hover */
+.card-clip-light:hover,
+.card-clip-light:hover * {
+  color: #ffffff !important;
+}
+/* Keep buttons their own colour inside hovered card */
+.card-clip-light:hover .btn-green,
+.card-clip-light:hover .btn-glow,
+.card-clip-light:hover .btn-primary,
+.card-clip-light:hover .btn-outline {
+  color: inherit;
+}
+
+/* Dark mode card — override light when .dark is active */
+:where(.dark, .dark *) .card-clip-light {
+  background: #0f1a0f;
+  border-color: #1a2e1a;
+}
+:where(.dark, .dark *) .card-clip-light:hover {
+  background: #166534;
+  box-shadow: 0 12px 32px rgba(74,222,128,0.15);
+}
+
+/* card-clip-dark: only used when explicitly needed outside dark context */
+.card-clip-dark {
+  background: #0f1a0f;
+  border: 1px solid #1a2e1a;
+}
+.card-clip-dark:hover {
+  background: #166534;
+  box-shadow: 0 12px 32px rgba(74,222,128,0.15);
+}
+
+/* ─── Responsive typography helpers ────────────────────── */
+.section-title {
+  font-size: clamp(1.75rem, 5vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.section-subtitle {
+  font-size: clamp(0.9rem, 2.5vw, 1.125rem);
+  line-height: 1.6;
+}
+
+/* ─── Land Rover Models Ticker ─────────────────────────── */
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: inline-flex;
+  width: max-content;
+  align-items: center;
+  animation: ticker-scroll 30s linear infinite;
+  will-change: transform;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
