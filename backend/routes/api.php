@@ -16,48 +16,48 @@ use App\Http\Controllers\VerifyInvoiceController;
 
 // ── Public routes ──────────────────────────────────────────────────────────
 
-// Create a new booking (public - for non-logged in users)
-Route::post('/bookings', [BookingController::class, 'store']);
+// Create a new booking (public - for non-logged in users) - rate limited: 30 req/min
+Route::throttle('30,1')->post('/bookings', [BookingController::class, 'store']);
 
-// Track booking by code (public — user checks their own booking)
-Route::get('/bookings/track/{code}', [BookingController::class, 'track']);
+// Track booking by code (public — user checks their own booking) - rate limited: 60 req/min
+Route::throttle('60,1')->get('/bookings/track/{code}', [BookingController::class, 'track']);
 
-// Get invoice by booking code (public — user checks their invoice)
-Route::get('/bookings/track/{code}/invoice', [InvoiceController::class, 'getByBookingCode']);
+// Get invoice by booking code (public — user checks their invoice) - rate limited: 60 req/min
+Route::throttle('60,1')->get('/bookings/track/{code}/invoice', [InvoiceController::class, 'getByBookingCode']);
 
-// Verify invoice authenticity (public)
-Route::get('/verify', [VerifyInvoiceController::class, 'verify']);
+// Verify invoice authenticity (public) - rate limited: 60 req/min
+Route::throttle('60,1')->get('/verify', [VerifyInvoiceController::class, 'verify']);
 
-// Statistics (public dashboard widget)
-Route::get('/bookings/statistics', [BookingController::class, 'statistics']);
+// Statistics (public dashboard widget) - rate limited: 120 req/min
+Route::throttle('120,1')->get('/bookings/statistics', [BookingController::class, 'statistics']);
 
-// Check booking availability (public)
-Route::get('/bookings/availability', [BookingController::class, 'availability']);
+// Check booking availability (public) - rate limited: 120 req/min
+Route::throttle('120,1')->get('/bookings/availability', [BookingController::class, 'availability']);
 
-// Review routes
-Route::post('/reviews', [ReviewController::class, 'store']); // Submit review (general)
-Route::post('/bookings/{code}/review', [ReviewController::class, 'store']); // Submit review for booking
-Route::get('/reviews', [ReviewController::class, 'index']);
-Route::get('/reviews/statistics', [ReviewController::class, 'statistics']);
+// Review routes - rate limited: 20 req/min for POST, 120 req/min for GET
+Route::throttle('20,1')->post('/reviews', [ReviewController::class, 'store']); // Submit review (general)
+Route::throttle('20,1')->post('/bookings/{code}/review', [ReviewController::class, 'store']); // Submit review for booking
+Route::throttle('120,1')->get('/reviews', [ReviewController::class, 'index']);
+Route::throttle('120,1')->get('/reviews/statistics', [ReviewController::class, 'statistics']);
 
-// Customer reschedule & cancel (public)
-Route::post('/bookings/{code}/reschedule', [BookingController::class, 'reschedule']);
-Route::post('/bookings/{code}/cancel', [BookingController::class, 'customerCancel']);
+// Customer reschedule & cancel (public) - rate limited: 30 req/min
+Route::throttle('30,1')->post('/bookings/{code}/reschedule', [BookingController::class, 'reschedule']);
+Route::throttle('30,1')->post('/bookings/{code}/cancel', [BookingController::class, 'customerCancel']);
 
-// Payment routes
-Route::get('/payment/{invoiceNumber}/status', [PaymentController::class, 'status']);
-Route::post('/payment/{invoiceNumber}/generate', [PaymentController::class, 'generateLink']);
+// Payment routes - rate limited: 60 req/min for status, 30 req/min for generate
+Route::throttle('60,1')->get('/payment/{invoiceNumber}/status', [PaymentController::class, 'status']);
+Route::throttle('30,1')->post('/payment/{invoiceNumber}/generate', [PaymentController::class, 'generateLink']);
 
-// Midtrans notification handler
+// Midtrans notification handler - NO RATE LIMIT (trusted webhook)
 Route::post('/midtrans/notification', [PaymentController::class, 'notification']);
 
-// Additional Midtrans notification handlers
+// Additional Midtrans notification handlers - NO RATE LIMIT (trusted webhook)
 Route::post('/midtrans/recurring', [PaymentController::class, 'recurringNotification']);
 Route::post('/midtrans/pay-account', [PaymentController::class, 'payAccountNotification']);
 
-// ── Authentication routes (public) ────────────────────────────────────────
+// ── Authentication routes (public) - rate limited: 5 req/min────────────────────────────────────────
 
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware('throttle:5,1')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
 });

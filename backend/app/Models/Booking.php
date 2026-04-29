@@ -26,6 +26,7 @@ class Booking extends Model
         'payment_status',
         'payment_token',
         'transaction_id',
+        'service_price',
     ];
 
     protected $casts = [
@@ -33,6 +34,7 @@ class Booking extends Model
         'scheduled_at'   => 'datetime',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',
+        'service_price'  => 'decimal:2',
     ];
 
     /**
@@ -50,18 +52,55 @@ class Booking extends Model
     }
 
     /**
-     * Generate a unique booking code: YNG-YYYYMMDD-NNN
+     * Generate a unique booking code with anti-fraud checksum: Y911-YYYYMMDD-XXXXXX-CHECKSUM
+     * Uses Luhn algorithm-like checksum to prevent manual manipulation
      */
     public static function generateBookingCode(): string
     {
         $date   = now()->format('Ymd');
-        $prefix = "YNG-{$date}-";
+        $prefix = "Y911-{$date}-";
 
-        // Count today's bookings to get the sequence number
-        // Use now()->toDateString() for consistent date comparison
+        // Count today's bookings to get the sequence number (6 digits)
         $count = static::whereDate('created_at', now()->toDateString())->count() + 1;
+        $sequence = str_pad($count, 6, '0', STR_PAD_LEFT);
 
-        return $prefix . str_pad($count, 3, '0', STR_PAD_LEFT);
+        // Generate checksum (last 2 digits using hash of components)
+        $checksum = self::generateChecksum($prefix . $sequence);
+
+        return $prefix . $sequence . '-' . $checksum;
+    }
+
+    /**
+     * Generate checksum for booking code (2 characters)
+     * Uses HMAC-SHA256 with app key
+     */
+    private static function generateChecksum(string $data): string
+    {
+        $key = config('app.key');
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+
+        $hash = hash_hmac('sha256', $data, $key);
+        // Take first 2 characters of hash, convert to uppercase
+        return strtoupper(substr($hash, 0, 2));
+    }
+
+    /**
+     * Verify booking code checksum (prevents manual code manipulation)
+     */
+    public static function verifyBookingCode(string $code): bool
+    {
+        // Format: Y911-YYYYMMDD-XXXXXX-XX
+        $parts = explode('-', $code);
+        if (count($parts) !== 4 || $parts[0] !== 'Y911') {
+            return false;
+        }
+
+        $baseCode = "{$parts[0]}-{$parts[1]}-{$parts[2]}";
+        $expectedChecksum = self::generateChecksum($baseCode);
+
+        return hash_equals($expectedChecksum, $parts[3]);
     }
 
     /**

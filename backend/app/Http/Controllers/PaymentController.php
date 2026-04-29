@@ -134,16 +134,35 @@ class PaymentController extends Controller
     {
         $notification = $request->all();
 
-        Log::info('Midtrans notification received', $notification);
+        // Log notification with redacted sensitive data
+        $redactedData = \App\Services\PaymentVerificationService::redactSensitiveData($notification);
+        Log::info('Midtrans notification received', $redactedData);
 
         try {
             // Verify notification signature
             if (!$this->verifyNotification($notification)) {
-                Log::error('Midtrans notification verification failed');
+                Log::error('Midtrans notification verification failed', [
+                    'order_id' => $notification['order_id'] ?? 'unknown',
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid notification',
                 ], 401);
+            }
+
+            // Validate payment amount hasn't been tampered with
+            $invoiceNumber = $notification['order_id'] ?? null;
+            $paidAmount = $notification['gross_amount'] ?? 0;
+            
+            if ($invoiceNumber && !$this->validatePaymentAmount($invoiceNumber, $paidAmount)) {
+                Log::error('Payment amount validation failed', [
+                    'order_id' => $invoiceNumber,
+                    'received_amount' => $paidAmount,
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment amount mismatch',
+                ], 400);
             }
 
             $result = $this->midtrans->handleInvoiceNotification($notification);
@@ -198,6 +217,14 @@ class PaymentController extends Controller
                 'message' => 'Error processing notification: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Validate payment amount hasn't been tampered with
+     */
+    private function validatePaymentAmount(string $invoiceNumber, float $paidAmount): bool
+    {
+        return \App\Services\PaymentVerificationService::validatePaymentAmount($invoiceNumber, $paidAmount);
     }
 
     /**

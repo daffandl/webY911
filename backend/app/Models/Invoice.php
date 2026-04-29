@@ -27,6 +27,7 @@ class Invoice extends Model
         'payment_method',
         'paid_at',
         'paid_amount',
+        'secure_hash',
     ];
 
     protected $casts = [
@@ -71,6 +72,12 @@ class Invoice extends Model
             }
             if ($invoice->total === null) {
                 $invoice->total = 0;
+            }
+        });
+
+        static::saved(function (Invoice $invoice) {
+            if (empty($invoice->secure_hash)) {
+                $invoice->generateSecureHash();
             }
         });
 
@@ -326,5 +333,52 @@ class Invoice extends Model
     {
         $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
         return "{$frontendUrl}/payment/{$this->invoice_number}";
+    }
+
+    // ─── Security Methods ────────────────────────────────────────────
+
+    /**
+     * Generate secure HMAC-SHA256 hash for invoice verification.
+     * Updates the secure_hash field.
+     */
+    public function generateSecureHash(): void
+    {
+        $key = config('app.key');
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+
+        $data = implode('|', [
+            $this->invoice_number,
+            $this->total,
+            $this->issued_at?->timestamp ?? 0,
+            $this->id,
+        ]);
+
+        $hash = hash_hmac('sha256', $data, $key);
+        $this->updateQuietly(['secure_hash' => $hash], ['touch' => false]);
+    }
+
+    /**
+     * Verify if the provided hash matches the invoice's secure hash.
+     * Uses constant-time comparison to prevent timing attacks.
+     */
+    public static function verifyHash(string $invoiceNumber, string $providedHash): bool
+    {
+        $invoice = static::where('invoice_number', $invoiceNumber)->first();
+        
+        if (!$invoice || !$invoice->secure_hash) {
+            return false;
+        }
+
+        return hash_equals($invoice->secure_hash, $providedHash);
+    }
+
+    /**
+     * Get secure hash for API responses (short version for UI display).
+     */
+    public function getSecureHashDisplay(): string
+    {
+        return substr($this->secure_hash ?? '', 0, 16);
     }
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import SecureStorage from '@/lib/SecureStorage';
 
 interface User {
   id: number;
@@ -16,6 +17,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  apiUrl: string;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, phone: string, password: string, passwordConfirmation: string, profilePhoto?: File | null) => Promise<void>;
   logout: () => Promise<void>;
@@ -33,15 +35,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize from secure session storage on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('auth_user');
+    try {
+      const storedToken = SecureStorage.getAuthToken();
+      const storedUser = SecureStorage.getUser();
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+      if (storedToken && storedUser) {
+        setToken(storedToken);
+        setUser(storedUser);
+      }
+    } catch (error) {
+      console.error('Failed to restore auth state:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -53,6 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        credentials: 'include', // Include cookies for HttpOnly cookie support
         body: JSON.stringify({ email, password }),
       });
 
@@ -86,11 +95,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { user: userData, token: newToken } = data.data;
       setUser(userData);
       setToken(newToken);
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      
+      // Store in secure session storage (auto-cleared on browser close)
+      SecureStorage.setAuthToken(newToken);
+      SecureStorage.setUser(userData);
     } catch (error: any) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      // Clear storage on error
+      SecureStorage.clear();
       setUser(null);
       setToken(null);
       throw error;
@@ -119,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: {
             'Accept': 'application/json',
           },
+          credentials: 'include',
           body: formData,
         });
       } else {
@@ -128,6 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
           },
+          credentials: 'include',
           body: JSON.stringify({ name, email, phone, password, password_confirmation: passwordConfirmation }),
         });
       }
@@ -162,11 +175,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { user: userData, token: newToken } = data.data;
       setUser(userData);
       setToken(newToken);
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      
+      // Store in secure session storage
+      SecureStorage.setAuthToken(newToken);
+      SecureStorage.setUser(userData);
     } catch (error: any) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      SecureStorage.clear();
       setUser(null);
       setToken(null);
       throw error;
@@ -182,14 +196,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await fetch(`${API_URL}/auth/logout`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
       setToken(null);
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+      SecureStorage.clear();
     }
   }, [token]);
 
@@ -203,14 +217,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       formData.append('name', name);
       formData.append('phone', phone);
       formData.append('profile_photo', profilePhoto);
-      formData.append('_method', 'PUT'); // Laravel method spoofing
+      formData.append('_method', 'PUT');
       
       response = await fetch(`${API_URL}/auth/profile`, {
-        method: 'POST', // Use POST with _method for FormData
+        method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Accept': 'application/json',
         },
+        credentials: 'include',
         body: formData,
       });
     } else {
@@ -219,7 +234,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
+          'Accept': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({ name, phone }),
       });
     }
@@ -231,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const updatedUser = data.data;
     setUser(updatedUser);
-    localStorage.setItem('auth_user', JSON.stringify(updatedUser));
+    SecureStorage.setUser(updatedUser);
   }, [token, user]);
 
   const changePassword = useCallback(async (currentPassword: string, password: string, passwordConfirmation: string) => {
@@ -242,7 +259,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+        'Accept': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         current_password: currentPassword,
         password,
@@ -263,6 +282,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         token,
         isLoading,
+        apiUrl: API_URL,
         login,
         register,
         logout,

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Booking;
+use App\Rules\PhoneNumberRule;
+use App\Rules\ServiceTypeRule;
 use App\Services\BookingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,11 +27,11 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'name'         => ['required', 'string', 'max:255'],
-            'phone'        => ['required', 'string', 'max:30'],
+            'phone'        => ['required', 'string', 'max:30', new PhoneNumberRule()],
             'email'        => ['required', 'email', 'max:255'],
             'car_model'    => ['required', 'string', 'max:255'],
             'vehicle_info' => ['nullable', 'string', 'max:500'],
-            'service_type' => ['required', 'string', 'max:150'],
+            'service_type' => ['required', 'string', 'max:150', new ServiceTypeRule()],
             'date'         => ['required', 'date', 'after_or_equal:today'],
             'notes'        => ['nullable', 'string', 'max:1000'],
         ]);
@@ -37,7 +39,7 @@ class BookingController extends Controller
         try {
             $bookingData = [
                 'name'          => $validated['name'],
-                'phone'         => $validated['phone'],
+                'phone'         => $this->normalizePhoneNumber($validated['phone']),
                 'email'         => $validated['email'],
                 'car_model'     => $validated['car_model'],
                 'vehicle_info'  => $validated['vehicle_info'] ?? null,
@@ -65,6 +67,26 @@ class BookingController extends Controller
                 'error' => 'Gagal membuat booking: ' . $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Normalize phone number to standard format (62xxxxxxxxx)
+     */
+    private function normalizePhoneNumber(string $phone): string
+    {
+        // Remove spaces, dashes, parentheses
+        $phone = str_replace([' ', '-', '(', ')'], '', $phone);
+
+        // Convert leading 0 to 62
+        if (str_starts_with($phone, '0')) {
+            $phone = '62' . substr($phone, 1);
+        }
+        // Remove leading + if present
+        elseif (str_starts_with($phone, '+')) {
+            $phone = substr($phone, 1);
+        }
+
+        return $phone;
     }
 
     // ─────────────────────────────────────────────────────────────

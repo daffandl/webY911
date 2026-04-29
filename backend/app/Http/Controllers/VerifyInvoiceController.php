@@ -21,18 +21,20 @@ class VerifyInvoiceController extends Controller
     /**
      * Verify an invoice by invoice number and hash.
      * Route: GET /api/verify
+     * 
+     * Uses HMAC-SHA256 signature verification for security.
      */
     public function verify(Request $request): JsonResponse
     {
         $request->validate([
             'invoice' => 'required|string|max:50',
-            'hash' => 'nullable|string|max:16',
+            'hash' => 'nullable|string|max:64',
         ]);
 
         $invoiceNumber = strtoupper($request->input('invoice'));
         $providedHash = $request->input('hash');
 
-        // Find invoice
+        // Find invoice with relationships
         $invoice = Invoice::where('invoice_number', $invoiceNumber)
             ->with(['items', 'booking'])
             ->first();
@@ -45,19 +47,13 @@ class VerifyInvoiceController extends Controller
             ], 404);
         }
 
-        // Generate expected hash
-        $expectedHash = substr(
-            hash('sha256', $invoice->invoice_number . '-' . $invoice->total . '-' . $invoice->created_at->timestamp),
-            0,
-            16
-        );
-
-        // Verify hash if provided
+        // Verify HMAC-SHA256 signature
         $isValid = false;
         $hashMatch = false;
 
         if ($providedHash) {
-            $hashMatch = $providedHash === $expectedHash;
+            // Use constant-time comparison to prevent timing attacks
+            $hashMatch = Invoice::verifyHash($invoiceNumber, $providedHash);
             $isValid = $hashMatch;
         } else {
             // If no hash provided, just check if invoice exists
@@ -154,6 +150,7 @@ class VerifyInvoiceController extends Controller
                     'customer_name' => $invoice->booking?->name,
                     'car_model' => $invoice->booking?->car_model,
                     'service_type' => $invoice->booking?->service_type,
+                    'secure_hash' => $invoice->getSecureHashDisplay(),
                 ],
                 'verification' => [
                     'is_valid' => $isValid,
