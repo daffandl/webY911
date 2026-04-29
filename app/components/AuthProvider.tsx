@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import SecureStorage from '@/lib/SecureStorage';
+import SecureStorage from '@/app/lib/SecureStorage';
 
 interface User {
   id: number;

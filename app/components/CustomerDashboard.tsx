@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/app/components/AuthProvider';
 import Link from 'next/link';
 
 interface Booking {

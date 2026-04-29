@@ -14,6 +14,10 @@ interface Invoice {
   status: 'draft' | 'sent' | 'paid' | 'cancelled';
   due_date: string | null;
   created_at: string;
+  payment_status?: string;
+  paid_amount?: number;
+  due_at?: string;
+  payment_url?: string;
 }
 
 export default function InvoicesPage() {

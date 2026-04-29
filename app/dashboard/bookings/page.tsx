@@ -19,6 +19,7 @@ interface Booking {
   payment_status: string;
   created_at: string;
   updated_at: string;
+  has_review?: boolean;
 }
 
 export default function BookingsPage() {
